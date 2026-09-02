@@ -10,6 +10,12 @@ app = Flask(__name__)
 _tracker = ExpenseTracker()
 
 
+@app.before_request
+def _reload():
+    """Re-read from disk/DB before every request so changes from CLI or other workers are visible."""
+    _tracker._load()
+
+
 def _e(expense):
     return {
         "id":             expense.id,
