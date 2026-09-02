@@ -25,6 +25,12 @@ print(f"Loaded {len(tracker.expenses)} entries from expenses.json")
 
 # Save to cloud DB
 os.environ["DATABASE_URL"] = db_url
+try:
+    import psycopg2
+except ImportError:
+    print("psycopg2 not installed. Run:  pip3 install psycopg2-binary")
+    sys.exit(1)
+
 tracker._save_to_db(db_url)
 print(f"Done! {len(tracker.expenses)} entries pushed to cloud database.")
 print("You can now deploy and your data will be there.")
