@@ -109,7 +109,7 @@ def fetch_emails(service, query: str, max_results: int = 50) -> list[dict]:
     emails = []
     for msg in messages:
         full = service.users().messages().get(
-            userId="me", messageId=msg["id"], format="full"
+            userId="me", id=msg["id"], format="full"
         ).execute()
         headers = {h["name"]: h["value"] for h in full["payload"]["headers"]}
         emails.append({
