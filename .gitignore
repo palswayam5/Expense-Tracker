@@ -1,0 +1,7 @@
+credentials.json
+token.json
+.imported_email_ids.json
+expenses.json
+__pycache__/
+*.pyc
+.venv/

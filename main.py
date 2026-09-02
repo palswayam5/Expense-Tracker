@@ -903,6 +903,49 @@ def cmd_balance(tracker: ExpenseTracker):
             print("  Invalid amount.")
 
 
+def cmd_sync_gmail(tracker: ExpenseTracker):
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BOLD  = "\033[1m"
+    RESET = "\033[0m"
+
+    print("\n  Sync emails from the last how many days?")
+    raw = _ask("  Days [30]: ") or "30"
+    try:
+        days = int(raw)
+    except ValueError:
+        print("  Invalid number.")
+        return
+
+    print(f"\n  {YELLOW}Dry run first — no entries will be saved yet.{RESET}")
+    dry = _ask("  Run dry run first? (y/n) [y]: ").lower() or "y"
+
+    if dry != "n":
+        print("\n  Scanning emails (dry run)…")
+        try:
+            results = tracker.sync_from_gmail(since_days=days, dry_run=True)
+            if not results:
+                print("  No new transactions found.")
+                return
+            print(f"\n  Found {len(results)} new transaction(s):")
+            for r in results:
+                print(f"    {r['date']}  {r['category']:<16} ₹{r['amount']:>8.2f}  {r['description']}")
+            confirm = _ask(f"\n  Import all {len(results)}? (y/n): ").lower()
+            if confirm != "y":
+                print("  Cancelled.")
+                return
+        except Exception as e:
+            print(f"  Error: {e}")
+            return
+
+    print("\n  Importing…")
+    try:
+        results = tracker.sync_from_gmail(since_days=days, dry_run=False)
+        print(f"\n  {GREEN}{BOLD}Imported {len(results)} transaction(s).{RESET}")
+    except Exception as e:
+        print(f"  Error: {e}")
+
+
 def main():
     tracker = ExpenseTracker()
     MENU = {
@@ -914,14 +957,15 @@ def main():
         "6": ("Monthly summary",      cmd_summary),
         "7": ("Set budgets",          cmd_budget),
         "8": ("Account balance",      cmd_balance),
-        "9": ("Quit",                 None),
+        "9": ("Sync from Gmail",      cmd_sync_gmail),
+        "10": ("Quit",                None),
     }
     print("\nExpense Tracker")
     while True:
         print()
         for key, (label, _) in MENU.items():
             print(f"  {key}. {label}")
-        choice = input("Choice: ").strip()
+        choice = input("Choice: ").strip().lstrip("0")
         if choice not in MENU:
             continue
         label, fn = MENU[choice]
