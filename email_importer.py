@@ -126,7 +126,9 @@ def fetch_emails(service, query: str, max_results: int = 50) -> list[dict]:
 
 _AMOUNT_RE = re.compile(r"(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)", re.IGNORECASE)
 _DATE_FORMATS = [
-    "%d %b %Y", "%d %B %Y", "%b %d, %Y", "%B %d, %Y",
+    "%d %b %Y", "%d %B %Y",
+    "%b %d, %Y", "%B %d, %Y",
+    "%b %d %Y", "%B %d %Y",
     "%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d",
 ]
 
@@ -139,9 +141,11 @@ def _parse_amount(text: str) -> Optional[float]:
 
 
 def _parse_date(text: str) -> str:
+    # Strip ordinal suffixes: "1st" → "1", "2nd" → "2", etc.
+    text = re.sub(r"(\d+)(st|nd|rd|th)\b", r"\1", text).strip()
     for fmt in _DATE_FORMATS:
         try:
-            return datetime.strptime(text.strip(), fmt).date().isoformat()
+            return datetime.strptime(text, fmt).date().isoformat()
         except ValueError:
             continue
     return date.today().isoformat()
@@ -282,30 +286,39 @@ def parse_uber(email: dict) -> Optional[ParsedTransaction]:
 
 def parse_rapido(email: dict) -> Optional[ParsedTransaction]:
     """
-    Rapido sends HTML receipt emails.
-      From:    no-reply@rapido.bike  (or noreply@rapido.bike)
-      Subject: "Your Rapido Ride Receipt" / "Ride Summary"
-      Body:    contains fare amount and ride type (Bike / Auto / Cab)
+    Rapido invoice emails from partner@rapido.bike.
+      Subject: "Rapido Invoice"
+      Body:    Total Amount ₹ 75.00, date "Sep 1st 2026", two address lines for route
     """
     body    = email["body"]
     subject = email["subject"]
 
-    amount = _parse_amount(body) or _parse_amount(subject)
+    # Prefer "Total Amount ₹ X" line to avoid picking up sub-charges
+    total_m = re.search(
+        r"Total\s+Amount\s*[₹Rs.]*\s*([\d,]+(?:\.\d{1,2})?)", body, re.IGNORECASE
+    )
+    amount = float(total_m.group(1).replace(",", "")) if total_m else _parse_amount(body)
     if not amount:
         return None
 
-    # Ride type: Bike, Auto, or Cab
-    ride_type = "Rapido Ride"
-    rt = re.search(r"\b(Bike|Auto|Cab|Captain)\b", body, re.IGNORECASE)
-    if rt:
-        ride_type = f"Rapido {rt.group(1).title()}"
+    # Route: extract Sector numbers from the two address lines
+    ride_desc = "Rapido Ride"
+    sectors = re.findall(r"Sector\s+\d+", body, re.IGNORECASE)
+    if len(sectors) >= 2:
+        ride_desc = f"Rapido: {sectors[0]} → {sectors[1]}"
+    elif sectors:
+        ride_desc = f"Rapido: {sectors[0]}"
 
+    # Date: "Sep 1st 2026" — ordinal suffix stripped by _parse_date
     txn_date = date.today().isoformat()
-    date_m = re.search(r"(\w+ \d{1,2},?\s*\d{4}|\d{1,2} \w+ \d{4}|\d{4}-\d{2}-\d{2})", body)
+    date_m = re.search(
+        r"((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{1,2}(?:st|nd|rd|th)?\s*,?\s*\d{4})",
+        body, re.IGNORECASE,
+    )
     if date_m:
         txn_date = _parse_date(date_m.group(1))
 
-    return ParsedTransaction(amount, ride_type, txn_date, "rapido", subject)
+    return ParsedTransaction(amount, ride_desc, txn_date, "rapido", subject)
 
 
 def parse_zomato(email: dict) -> Optional[ParsedTransaction]:
@@ -372,7 +385,7 @@ APP_QUERIES = {
     "gpay":   "from:gpay-noreply@google.com OR from:googleplay-noreply@google.com subject:(paid OR payment)",
     "cred":   "from:noreply@cred.club subject:(payment OR bill)",
     "uber":   "from:uber@uber.com OR from:noreply@uber.com subject:(trip OR receipt)",
-    "rapido": "from:no-reply@rapido.bike OR from:noreply@rapido.bike subject:(ride OR receipt OR summary)",
+    "rapido": "from:partner@rapido.bike OR from:no-reply@rapido.bike OR from:noreply@rapido.bike subject:(ride OR receipt OR summary OR invoice)",
     "zomato": "from:noreply@zomato.com subject:(order OR confirmed OR delivered)",
 }
 
