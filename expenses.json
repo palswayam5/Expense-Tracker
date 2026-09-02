@@ -1,0 +1,452 @@
+{
+  "expenses": [
+    {
+      "amount": 607.0,
+      "category": "Utilities",
+      "description": "Rented furniture",
+      "date": "2026-08-30",
+      "tags": [],
+      "id": "7ffa8e4b",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": ""
+    },
+    {
+      "amount": 100.0,
+      "category": "Transport",
+      "description": "Bike \u2014 To Clock tower for office party",
+      "date": "2026-08-31",
+      "tags": [],
+      "id": "95c7676a",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": ""
+    },
+    {
+      "amount": 102632.0,
+      "category": "Salary",
+      "description": "Monthly salary \u2014 August Salary",
+      "date": "2026-08-31",
+      "tags": [],
+      "id": "d4197607",
+      "entry_type": "income",
+      "quantity": 1.0,
+      "payment_method": ""
+    },
+    {
+      "amount": 100000.0,
+      "category": "Salary",
+      "description": "Bonus",
+      "date": "2026-08-31",
+      "tags": [],
+      "id": "c1660679",
+      "entry_type": "income",
+      "quantity": 1.0,
+      "payment_method": ""
+    },
+    {
+      "amount": 80000.0,
+      "category": "Family/Home",
+      "description": "Money sent home \u2014 Money sent to mumma",
+      "date": "2026-08-31",
+      "tags": [],
+      "id": "e25f9a3f",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": ""
+    },
+    {
+      "amount": 37.0,
+      "category": "Transport",
+      "description": "Auto \u2014 Clock tower to Pivotol",
+      "date": "2026-08-31",
+      "tags": [],
+      "id": "5022e546",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": ""
+    },
+    {
+      "amount": 25.0,
+      "category": "Food",
+      "description": "Mother Dairy Toned Fresh Milk",
+      "date": "2026-08-31",
+      "tags": [
+        "zepto",
+        "invoice"
+      ],
+      "id": "860f0b7f",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": ""
+    },
+    {
+      "amount": 73.74,
+      "category": "Utilities",
+      "description": "Colgate Total Advanced Health Antibacterial Toothpaste",
+      "date": "2026-08-31",
+      "tags": [
+        "zepto",
+        "invoice"
+      ],
+      "id": "c8f1a2d7",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": ""
+    },
+    {
+      "amount": 40.14,
+      "category": "Utilities",
+      "description": "Savlon Moisture Shield Germ Protection Hand Wash 1 pc (200 m",
+      "date": "2026-08-31",
+      "tags": [
+        "zepto",
+        "invoice"
+      ],
+      "id": "016dcd8e",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": ""
+    },
+    {
+      "amount": 37.34,
+      "category": "Utilities",
+      "description": "Double Sided Tapes - Foam, Acrylic Multicolor Tapes",
+      "date": "2026-08-31",
+      "tags": [
+        "zepto",
+        "invoice"
+      ],
+      "id": "4ab6bf64",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": ""
+    },
+    {
+      "amount": 22.41,
+      "category": "Food",
+      "description": "Groceries \u2014 Banana",
+      "date": "2026-08-31",
+      "tags": [],
+      "id": "189b55a9",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": ""
+    },
+    {
+      "amount": 69.0,
+      "category": "Utilities",
+      "description": "Furniture/Appliance rent \u2014 Container",
+      "date": "2026-08-31",
+      "tags": [],
+      "id": "405cbdd8",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": ""
+    },
+    {
+      "amount": 44.0,
+      "category": "Transport",
+      "description": "Bike \u2014 Bike to sector 55-56",
+      "date": "2026-09-01",
+      "tags": [
+        "paid by paytm"
+      ],
+      "id": "1d474f2c",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": ""
+    },
+    {
+      "amount": 30.0,
+      "category": "Transport",
+      "description": "E-rickshaw \u2014 Sikanderpur to Office",
+      "date": "2026-09-01",
+      "tags": [
+        "paid by paytm"
+      ],
+      "id": "ca3cbe90",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": ""
+    },
+    {
+      "amount": 1157.0,
+      "category": "Food",
+      "description": "Protein powder",
+      "date": "2026-08-31",
+      "tags": [
+        "Zepto Delivery"
+      ],
+      "id": "045cd9bf",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "CRED"
+    },
+    {
+      "amount": 2000.0,
+      "category": "Other",
+      "description": "Chapo to Ish and group",
+      "date": "2026-08-31",
+      "tags": [
+        "Took out money from Credit card"
+      ],
+      "id": "b4593ffb",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "Credit Card"
+    },
+    {
+      "amount": 2000.0,
+      "category": "Other",
+      "description": "Rakhi",
+      "date": "2026-08-28",
+      "tags": [
+        "Took out money to cred from credit card"
+      ],
+      "id": "5e25666d",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "Credit Card"
+    },
+    {
+      "amount": 1500.0,
+      "category": "Health",
+      "description": "Gym/Fitness \u2014 Gym fees",
+      "date": "2026-08-31",
+      "tags": [],
+      "id": "d57c8d99",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "Credit Card"
+    },
+    {
+      "amount": 30000.0,
+      "category": "Family/Home",
+      "description": "Money sent home \u2014 to Mumma",
+      "date": "2026-09-01",
+      "tags": [],
+      "id": "242a555d",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "PayTM"
+    },
+    {
+      "amount": 25000.0,
+      "category": "Loan Repayment",
+      "description": "Education loan EMI",
+      "date": "2026-09-01",
+      "tags": [],
+      "id": "952e81b1",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "Net Banking"
+    },
+    {
+      "amount": 70.0,
+      "category": "Transport",
+      "description": "Bike \u2014 Pivotol to Ravi Gas Agency",
+      "date": "2026-09-01",
+      "tags": [],
+      "id": "089f1973",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "PayTM"
+    },
+    {
+      "amount": 75.0,
+      "category": "Transport",
+      "description": "Bike \u2014 Ravi Agency to Pivotol",
+      "date": "2026-09-01",
+      "tags": [],
+      "id": "a4b07997",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "PayTM"
+    },
+    {
+      "amount": 47.0,
+      "category": "Transport",
+      "description": "Bike \u2014 Sector 55-56 to Pivotol",
+      "date": "2026-09-01",
+      "tags": [],
+      "id": "78fbba73",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "PayTM"
+    },
+    {
+      "amount": 40.0,
+      "category": "Transport",
+      "description": "Bike \u2014 Office to Cybercity metro",
+      "date": "2026-09-01",
+      "tags": [],
+      "id": "e8c378d1",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "PayTM"
+    },
+    {
+      "amount": 50.0,
+      "category": "Food",
+      "description": "Groceries \u2014 Milk",
+      "date": "2026-09-01",
+      "tags": [],
+      "id": "6183a460",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "PayTM"
+    },
+    {
+      "amount": 2661.0,
+      "category": "Utilities",
+      "description": "Gas \u2014 Bought Cylinder first time",
+      "date": "2026-09-01",
+      "tags": [],
+      "id": "3f8add94",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "PayTM"
+    },
+    {
+      "amount": 35.0,
+      "category": "Food",
+      "description": "Snacks \u2014 Electrolyte water",
+      "date": "2026-09-01",
+      "tags": [],
+      "id": "26214d4d",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "PayTM"
+    },
+    {
+      "amount": 20.0,
+      "category": "Food",
+      "description": "Zomato/Swiggy \u2014 At lunch 30 extra in office",
+      "date": "2026-08-31",
+      "tags": [],
+      "id": "567616ab",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "PayTM"
+    },
+    {
+      "amount": 161.0,
+      "category": "Food",
+      "description": "Restaurant \u2014 Sochmat",
+      "date": "2026-09-01",
+      "tags": [],
+      "id": "44f5f16a",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "CRED"
+    },
+    {
+      "amount": 200.0,
+      "category": "Transport",
+      "description": "Metro \u2014 Metro Card Recharge",
+      "date": "2026-09-02",
+      "tags": [],
+      "id": "a3765d9c",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "PayTM"
+    },
+    {
+      "amount": 30.0,
+      "category": "Transport",
+      "description": "E-rickshaw \u2014 Sikanderpur to office",
+      "date": "2026-09-02",
+      "tags": [],
+      "id": "732e4618",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "PayTM"
+    },
+    {
+      "amount": 63.0,
+      "category": "Transport",
+      "description": "Bike \u2014 Pivotol to secotr 55-56",
+      "date": "2026-09-02",
+      "tags": [],
+      "id": "acc9ed53",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "PayTM"
+    },
+    {
+      "amount": 27600.0,
+      "category": "Utilities",
+      "description": "Rent + Deposit",
+      "date": "2026-09-02",
+      "tags": [],
+      "id": "318c9d0c",
+      "entry_type": "expense",
+      "quantity": 1.0,
+      "payment_method": "CRED"
+    }
+  ],
+  "categories": [
+    {
+      "name": "Food",
+      "monthly_budget": 6000.0,
+      "entry_type": "expense"
+    },
+    {
+      "name": "Transport",
+      "monthly_budget": 5000.0,
+      "entry_type": "expense"
+    },
+    {
+      "name": "Entertainment",
+      "monthly_budget": 150.0,
+      "entry_type": "expense"
+    },
+    {
+      "name": "Utilities",
+      "monthly_budget": 35000.0,
+      "entry_type": "expense"
+    },
+    {
+      "name": "Health",
+      "monthly_budget": 0.0,
+      "entry_type": "expense"
+    },
+    {
+      "name": "Shopping",
+      "monthly_budget": 400.0,
+      "entry_type": "expense"
+    },
+    {
+      "name": "Family/Home",
+      "monthly_budget": 0.0,
+      "entry_type": "expense"
+    },
+    {
+      "name": "Loan Repayment",
+      "monthly_budget": 0.0,
+      "entry_type": "expense"
+    },
+    {
+      "name": "Other",
+      "monthly_budget": 0.0,
+      "entry_type": "expense"
+    },
+    {
+      "name": "Salary",
+      "monthly_budget": 0.0,
+      "entry_type": "income"
+    },
+    {
+      "name": "Freelance",
+      "monthly_budget": 0.0,
+      "entry_type": "income"
+    },
+    {
+      "name": "Other Income",
+      "monthly_budget": 0.0,
+      "entry_type": "income"
+    }
+  ],
+  "opening_balance": 0.0
+}
