@@ -126,6 +126,12 @@ class ExpenseTracker:
             with psycopg2.connect(db_url) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
+                        CREATE TABLE IF NOT EXISTS tracker_data (
+                            id INTEGER PRIMARY KEY,
+                            data JSONB NOT NULL
+                        )
+                    """)
+                    cur.execute("""
                         INSERT INTO tracker_data (id, data) VALUES (1, %s)
                         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data
                     """, (json.dumps(self._build_data()),))
