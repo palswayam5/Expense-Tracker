@@ -1079,7 +1079,7 @@ function renderSplitwisePanel(b) {
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
           <div class="card-title" style="margin-bottom:0">Splitwise</div>
-          <button class="btn btn-primary btn-sm" onclick="syncSplitwise()" id="sw-sync-btn">↻ Sync</button>
+          <button class="btn btn-primary btn-sm" onclick="syncSplitwise()" id="sw-sync-btn">↻ Sync from Gmail</button>
         </div>
         ${sw !== 0 ? `
           <div style="font-size:26px;font-weight:800;color:${sw >= 0 ? 'var(--green)' : 'var(--red)'};letter-spacing:-.5px;margin-bottom:4px">
@@ -1089,24 +1089,27 @@ function renderSplitwisePanel(b) {
           ${breakdownRows ? `<div class="table-wrap"><table style="width:100%"><tbody>${breakdownRows}</tbody></table></div>` : ''}
         ` : `
           <p style="color:var(--text2);font-size:13px;margin-bottom:10px">
-            No Splitwise data yet. Hit Sync to fetch your balance.
+            No Splitwise data yet. Sync reads your Gmail Splitwise notifications automatically.
           </p>
-          ${lastSynced ? `<p style="font-size:12px;color:var(--text3)">Last synced: ${lastSynced}</p>` : ''}
         `}
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:8px">Or set manually</div>
+          <div style="display:flex;gap:8px">
+            <input id="sw-manual-input" type="number" step="0.01" placeholder="${sw || '0.00'}" style="max-width:150px">
+            <button class="btn btn-ghost btn-sm" onclick="saveSWManual()">Set</button>
+          </div>
+          <p style="font-size:11px;color:var(--text3);margin-top:6px">Positive = others owe you · Negative = you owe others</p>
+        </div>
       </div>
       <div class="card">
-        <div class="card-title">Connect Splitwise</div>
-        <p style="color:var(--text2);font-size:13px;line-height:1.6;margin-bottom:12px">
-          Add your Splitwise API key as an environment variable on Render:
-        </p>
-        <ol style="font-size:13px;color:var(--text2);padding-left:18px;line-height:2">
-          <li>Go to <strong>splitwise.com/apps/api</strong></li>
-          <li>Click <strong>Register your application</strong></li>
-          <li>Fill any name, set Homepage URL to your Render URL</li>
-          <li>Copy the <strong>API Key</strong> shown</li>
-          <li>In Render → your service → <strong>Environment</strong></li>
-          <li>Add variable: <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:12px">SPLITWISE_API_KEY</code> = paste key</li>
-          <li>Redeploy → come back and hit <strong>Sync</strong></li>
+        <div class="card-title">How Gmail Sync Works</div>
+        <ol style="font-size:13px;color:var(--text2);padding-left:18px;line-height:2.1;margin-bottom:16px">
+          <li>Make sure Splitwise email notifications are <strong>ON</strong><br>
+            <span style="font-size:12px;color:var(--text3)">splitwise.com → Account settings → Notifications</span></li>
+          <li>Run <strong>↻ Sync from Gmail</strong> below — it reads your Splitwise notification emails and extracts the net balance</li>
+          <li>If you're on the cloud (Render), run sync <strong>locally</strong> via the CLI:<br>
+            <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px">python3 main.py</code> → pick <em>Sync Splitwise</em></li>
+          <li>The balance is saved to the database and shown here automatically</li>
         </ol>
       </div>
     </div>`;
@@ -1114,17 +1117,26 @@ function renderSplitwisePanel(b) {
 
 async function syncSplitwise() {
   const btn = document.getElementById('sw-sync-btn');
-  if (btn) { btn.textContent = 'Syncing…'; btn.disabled = true; }
+  if (btn) { btn.textContent = 'Scanning Gmail…'; btn.disabled = true; }
   const r = await api.post('/api/splitwise/sync', {});
-  if (btn) { btn.textContent = '↻ Sync'; btn.disabled = false; }
+  if (btn) { btn.textContent = '↻ Sync from Gmail'; btn.disabled = false; }
   if (r.ok) {
-    toast('Splitwise synced!');
+    const data = await r.json();
+    toast(`Splitwise synced! Balance: ${data.net_balance >= 0 ? '+' : ''}₹${Math.abs(data.net_balance).toFixed(2)}`);
     loadBalance();
     loadDashboard();
   } else {
     const err = await r.json();
     toast(err.error || 'Splitwise sync failed.', false);
   }
+}
+
+async function saveSWManual() {
+  const val = parseFloat(document.getElementById('sw-manual-input').value);
+  if (isNaN(val)) { toast('Enter a valid amount.', false); return; }
+  const r = await api.put('/api/splitwise/manual', { balance: val });
+  if (r.ok) { toast('Splitwise balance saved!'); loadBalance(); loadDashboard(); }
+  else toast('Could not save.', false);
 }
 
 async function saveOpeningBalance() {

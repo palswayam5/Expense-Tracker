@@ -134,27 +134,36 @@ def get_balance():
 
 @app.route("/api/splitwise/status", methods=["GET"])
 def splitwise_status():
-    configured = bool(os.environ.get("SPLITWISE_API_KEY"))
     return jsonify({
-        "configured":    configured,
-        "balance":       _tracker.splitwise_balance,
-        "last_synced":   _tracker.splitwise_last_synced,
-        "breakdown":     _tracker.splitwise_breakdown,
+        "balance":     _tracker.splitwise_balance,
+        "last_synced": _tracker.splitwise_last_synced,
+        "breakdown":   _tracker.splitwise_breakdown,
     })
 
 
 @app.route("/api/splitwise/sync", methods=["POST"])
 def splitwise_sync():
-    api_key = os.environ.get("SPLITWISE_API_KEY")
-    if not api_key:
-        return jsonify({"error": "SPLITWISE_API_KEY not set — add it as an environment variable on Render"}), 400
-    from splitwise_sync import fetch_balance
+    from splitwise_sync import fetch_balance_from_gmail
     try:
-        result = fetch_balance(api_key)
+        result = fetch_balance_from_gmail()
+        if "error" in result and result["net_balance"] == 0.0:
+            return jsonify(result), 400
         _tracker.update_splitwise_balance(result["net_balance"], result["breakdown"])
         return jsonify(result)
+    except FileNotFoundError:
+        return jsonify({"error": "Gmail not authorised on this server. Run sync locally via the CLI menu instead."}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/splitwise/manual", methods=["PUT"])
+def splitwise_manual():
+    d = request.get_json(force=True)
+    try:
+        _tracker.update_splitwise_balance(float(d["balance"]), [])
+        return jsonify({"ok": True})
+    except (ValueError, KeyError) as err:
+        return jsonify({"error": str(err)}), 400
 
 
 @app.route("/api/balance/opening", methods=["PUT"])

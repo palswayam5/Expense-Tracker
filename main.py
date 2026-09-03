@@ -1048,25 +1048,62 @@ def cmd_sync_gmail(tracker: ExpenseTracker):
         print(f"  Error: {e}")
 
 
+def cmd_sync_splitwise(tracker: ExpenseTracker):
+    GREEN = "\033[32m"
+    RED   = "\033[31m"
+    BOLD  = "\033[1m"
+    RESET = "\033[0m"
+
+    print("\n  Scanning Splitwise emails from Gmail…")
+    try:
+        from splitwise_sync import fetch_balance_from_gmail
+        result = fetch_balance_from_gmail()
+    except Exception as e:
+        print(f"  Error: {e}")
+        return
+
+    if "error" in result and result["net_balance"] == 0.0:
+        print(f"  {RED}{result['error']}{RESET}")
+        return
+
+    net = result["net_balance"]
+    color = GREEN if net >= 0 else RED
+    sign  = "+" if net >= 0 else ""
+    print(f"\n  {color}{BOLD}Splitwise balance: {sign}₹{net:,.2f}{RESET}")
+    if result.get("breakdown"):
+        for r in result["breakdown"]:
+            color2 = GREEN if r["amount"] >= 0 else RED
+            sign2  = "+" if r["amount"] >= 0 else ""
+            print(f"    {r['name']:<20} {color2}{sign2}₹{r['amount']:,.2f}{RESET}")
+
+    confirm = _ask(f"\n  Save this balance? (y/n): ").strip().lower()
+    if confirm == "y":
+        tracker.update_splitwise_balance(net, result["breakdown"])
+        print(f"  {GREEN}Saved.{RESET}")
+    else:
+        print("  Cancelled.")
+
+
 def main():
     tracker = ExpenseTracker()
     MENU = {
-        "1": ("Add expense",          cmd_add),
-        "2": ("Import invoice (PDF)", cmd_import_invoice),
-        "3": ("List expenses",        cmd_list),
-        "4": ("Edit expense",         cmd_edit),
-        "5": ("Delete expense",       cmd_delete),
-        "6": ("Monthly summary",      cmd_summary),
-        "7": ("Set budgets",          cmd_budget),
-        "8": ("Account balance",      cmd_balance),
-        "9": ("Sync from Gmail",      cmd_sync_gmail),
-        "10": ("Quit",                None),
+        "1":  ("Add expense",            cmd_add),
+        "2":  ("Import invoice (PDF)",   cmd_import_invoice),
+        "3":  ("List expenses",          cmd_list),
+        "4":  ("Edit expense",           cmd_edit),
+        "5":  ("Delete expense",         cmd_delete),
+        "6":  ("Monthly summary",        cmd_summary),
+        "7":  ("Set budgets",            cmd_budget),
+        "8":  ("Account balance",        cmd_balance),
+        "9":  ("Sync from Gmail",        cmd_sync_gmail),
+        "10": ("Sync Splitwise balance", cmd_sync_splitwise),
+        "11": ("Quit", None),
     }
     print("\nExpense Tracker")
     while True:
         print()
         for key, (label, _) in MENU.items():
-            print(f"  {key}. {label}")
+            print(f"  {key:>2}. {label}")
         choice = input("Choice: ").strip().lstrip("0")
         if choice not in MENU:
             continue
