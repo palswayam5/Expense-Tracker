@@ -371,7 +371,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
     </div>
     <div id="dash-balance"></div>
     <div class="stat-grid" id="dash-stats"></div>
-    <div class="two-col">
+    <div class="two-col" style="margin-bottom:16px">
       <div class="card">
         <div class="card-title">Budget Health — This Month</div>
         <div id="dash-budgets"></div>
@@ -384,6 +384,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
         <div id="dash-recent"></div>
       </div>
     </div>
+    <div id="dash-splitwise"></div>
   </section>
 
   <!-- ADD ENTRY -->
@@ -762,6 +763,9 @@ async function loadDashboard() {
   // Budget bars
   renderBudgetBars('dash-budgets', summary.budget_status);
 
+  // Splitwise panel
+  renderDashSplitwise(balance);
+
   // Recent
   const tbody = recent.slice(0, 8).map(e => `
     <tr>
@@ -774,6 +778,72 @@ async function loadDashboard() {
   document.getElementById('dash-recent').innerHTML = tbody
     ? `<table style="width:100%"><tbody>${tbody}</tbody></table>`
     : `<div class="empty"><div class="icon">📭</div><p>No entries yet.</p></div>`;
+}
+
+// ── Splitwise dashboard widget ───────────────────────────────────────────────
+function renderDashSplitwise(balance) {
+  const sw         = balance.splitwise_balance || 0;
+  const lastSynced = balance.splitwise_last_synced || '';
+  const breakdown  = balance.splitwise_breakdown  || [];
+  const el         = document.getElementById('dash-splitwise');
+
+  const swColor = sw > 0 ? 'var(--green)' : sw < 0 ? 'var(--red)' : 'var(--text2)';
+  const swSign  = sw > 0 ? '+' : '';
+  const swLabel = sw > 0 ? 'others owe you' : sw < 0 ? 'you owe others' : 'no balance';
+
+  const bdRows = breakdown.slice(0, 6).map(r => {
+    const c = r.amount >= 0 ? 'var(--green)' : 'var(--red)';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px">${r.name}</span>
+      <span style="font-size:13px;font-weight:600;color:${c}">${r.amount >= 0 ? '+' : ''}${fmt(r.amount)}</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+        <div>
+          <div class="card-title" style="margin-bottom:4px">Splitwise</div>
+          <div style="font-size:28px;font-weight:800;color:${swColor};letter-spacing:-.5px;line-height:1">${sw !== 0 ? swSign + fmt(sw) : '—'}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:3px">${swLabel}${lastSynced ? ' · ' + lastSynced : ''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+          <button class="btn btn-primary btn-sm" onclick="dashSyncSplitwise()" id="dash-sw-btn">↻ Sync</button>
+          ${sw === 0 ? `<div style="display:flex;gap:6px;align-items:center">
+            <input id="dash-sw-manual" type="number" step="0.01" placeholder="set manually"
+              style="width:130px;padding:5px 8px;font-size:12px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">
+            <button class="btn btn-ghost btn-sm" onclick="dashSWManual()">Set</button>
+          </div>` : ''}
+        </div>
+      </div>
+      ${bdRows ? `<div>${bdRows}</div>` : sw !== 0 ? '' : `
+        <p style="font-size:13px;color:var(--text3)">
+          Hit <strong>↻ Sync</strong> to read your balance from Gmail — it scans emails from Splitwise automatically.
+        </p>`}
+    </div>`;
+}
+
+async function dashSyncSplitwise() {
+  const btn = document.getElementById('dash-sw-btn');
+  if (btn) { btn.textContent = 'Scanning…'; btn.disabled = true; }
+  const r = await api.post('/api/splitwise/sync', {});
+  if (btn) { btn.textContent = '↻ Sync'; btn.disabled = false; }
+  if (r.ok) {
+    const data = await r.json();
+    toast(`Splitwise synced! ${data.net_balance >= 0 ? '+' : ''}₹${Math.abs(data.net_balance).toFixed(2)}`);
+    loadDashboard();
+  } else {
+    const err = await r.json();
+    toast(err.error || 'Sync failed.', false);
+  }
+}
+
+async function dashSWManual() {
+  const val = parseFloat(document.getElementById('dash-sw-manual')?.value);
+  if (isNaN(val)) { toast('Enter an amount.', false); return; }
+  const r = await api.put('/api/splitwise/manual', { balance: val });
+  if (r.ok) { toast('Splitwise balance saved!'); loadDashboard(); }
+  else toast('Could not save.', false);
 }
 
 // ── Budget bars renderer ─────────────────────────────────────────────────────
