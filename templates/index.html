@@ -703,20 +703,24 @@ async function loadDashboard() {
   const sign  = balance.expected_balance >= 0 ? '+' : '';
   document.getElementById('dash-balance').innerHTML = `
     <div class="balance-card" style="margin-bottom:20px">
-      <div class="label">Expected Account Balance</div>
+      <div class="label">Expected Bank Balance</div>
       <div class="amount">${sign}${fmt(balance.expected_balance)}</div>
       <div class="sub">
-        <span>Total income <strong>${fmt(balance.total_income)}</strong></span>
-        <span>Total spent <strong>${fmt(balance.total_expense)}</strong></span>
-        <span>Months tracked <strong>${balance.months_active}</strong></span>
+        <span>+ Income <strong>${fmt(balance.total_income)}</strong></span>
+        <span>− Expenses <strong>${fmt(balance.total_expense)}</strong></span>
+        <span>− Invested <strong>${fmt(balance.total_invested)}</strong></span>
+        <span>Months <strong>${balance.months_active}</strong></span>
       </div>
     </div>`;
 
   // Stats
-  const month  = summary.month;
-  const net    = summary.net;
-  const bankBal = balance.expected_balance;
-  document.getElementById('dash-stats').innerHTML = `
+  const month    = summary.month;
+  const net      = summary.net;
+  const bankBal  = balance.expected_balance;
+  const invested = balance.total_invested;
+  const statsEl  = document.getElementById('dash-stats');
+  statsEl.style.gridTemplateColumns = 'repeat(5, 1fr)';
+  statsEl.innerHTML = `
     <div class="stat-card">
       <div class="stat-label">Total Earned</div>
       <div class="stat-value green">${fmt(balance.total_income)}</div>
@@ -733,9 +737,14 @@ async function loadDashboard() {
       <div style="font-size:11px;color:var(--text3);margin-top:3px">${month}</div>
     </div>
     <div class="stat-card">
+      <div class="stat-label">Total Invested</div>
+      <div class="stat-value" style="color:#0891b2">${fmt(invested)}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">in portfolio</div>
+    </div>
+    <div class="stat-card">
       <div class="stat-label">Bank Balance</div>
       <div class="stat-value ${bankBal >= 0 ? 'indigo' : 'red'}">${bankBal >= 0 ? '+' : ''}${fmt(bankBal)}</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:3px">expected total savings</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">after investments</div>
     </div>`;
 
   // Budget bars
@@ -1002,12 +1011,13 @@ async function loadBalance() {
   const sign = b.expected_balance >= 0 ? '+' : '';
   document.getElementById('balance-main').innerHTML = `
     <div class="balance-card" style="margin-bottom:20px">
-      <div class="label">Expected Account Balance</div>
+      <div class="label">Expected Bank Balance</div>
       <div class="amount">${sign}${fmt(b.expected_balance)}</div>
       <div class="sub">
         <span>Opening <strong>${fmt(b.opening_balance)}</strong></span>
         <span>+ Income <strong>${fmt(b.total_income)}</strong></span>
         <span>− Expenses <strong>${fmt(b.total_expense)}</strong></span>
+        <span>− Invested <strong>${fmt(b.total_invested)}</strong></span>
       </div>
     </div>`;
 

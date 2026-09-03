@@ -113,12 +113,14 @@ def get_summary():
 
 @app.route("/api/balance", methods=["GET"])
 def get_balance():
-    at = _tracker.all_time_summary()
-    bm = _tracker.balance_by_payment_method()
+    at             = _tracker.all_time_summary()
+    bm             = _tracker.balance_by_payment_method()
+    total_invested = _tracker.investment_summary()["total_invested"]
     return jsonify({
         **at,
         "opening_balance":  _tracker.opening_balance,
-        "expected_balance": round(_tracker.opening_balance + at["total_income"] - at["total_expense"], 2),
+        "total_invested":   total_invested,
+        "expected_balance": round(_tracker.opening_balance + at["total_income"] - at["total_expense"] - total_invested, 2),
         "by_payment_method": [{"method": k, "amount": v} for k, v in bm.items()],
     })
 
