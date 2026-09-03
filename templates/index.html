@@ -511,6 +511,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
         <p id="opening-note" style="margin-top:8px;font-size:12px;color:var(--text2)"></p>
       </div>
     </div>
+    <!-- Splitwise panel (rendered dynamically) -->
+    <div id="splitwise-panel" style="margin-top:4px"></div>
   </section>
 
   <!-- BUDGETS -->
@@ -701,15 +703,17 @@ async function loadDashboard() {
 
   // Balance card
   const sign  = balance.expected_balance >= 0 ? '+' : '';
+  const swLine = balance.splitwise_balance > 0
+    ? `<span>+ Splitwise <strong>${fmt(balance.splitwise_balance)}</strong></span>` : '';
   document.getElementById('dash-balance').innerHTML = `
     <div class="balance-card" style="margin-bottom:20px">
-      <div class="label">Expected Bank Balance</div>
+      <div class="label">Net Balance</div>
       <div class="amount">${sign}${fmt(balance.expected_balance)}</div>
       <div class="sub">
         <span>+ Income <strong>${fmt(balance.total_income)}</strong></span>
         <span>− Expenses <strong>${fmt(balance.total_expense)}</strong></span>
         <span>− Invested <strong>${fmt(balance.total_invested)}</strong></span>
-        <span>Months <strong>${balance.months_active}</strong></span>
+        ${swLine}
       </div>
     </div>`;
 
@@ -718,8 +722,10 @@ async function loadDashboard() {
   const net      = summary.net;
   const bankBal  = balance.expected_balance;
   const invested = balance.total_invested;
+  const sw       = balance.splitwise_balance || 0;
   const statsEl  = document.getElementById('dash-stats');
-  statsEl.style.gridTemplateColumns = 'repeat(5, 1fr)';
+  const cols     = sw > 0 ? 6 : 5;
+  statsEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   statsEl.innerHTML = `
     <div class="stat-card">
       <div class="stat-label">Total Earned</div>
@@ -741,10 +747,16 @@ async function loadDashboard() {
       <div class="stat-value" style="color:#0891b2">${fmt(invested)}</div>
       <div style="font-size:11px;color:var(--text3);margin-top:3px">in portfolio</div>
     </div>
+    ${sw > 0 ? `
     <div class="stat-card">
-      <div class="stat-label">Bank Balance</div>
+      <div class="stat-label">Splitwise Owed</div>
+      <div class="stat-value" style="color:#0d9488">+${fmt(sw)}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">pending from others</div>
+    </div>` : ''}
+    <div class="stat-card">
+      <div class="stat-label">Net Balance</div>
       <div class="stat-value ${bankBal >= 0 ? 'indigo' : 'red'}">${bankBal >= 0 ? '+' : ''}${fmt(bankBal)}</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:3px">after investments</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">bank${sw > 0 ? ' + splitwise' : ''}</div>
     </div>`;
 
   // Budget bars
@@ -1009,17 +1021,23 @@ async function loadBalance() {
   const b = await api.get('/api/balance');
 
   const sign = b.expected_balance >= 0 ? '+' : '';
+  const swSubLine = b.splitwise_balance > 0
+    ? `<span>+ Splitwise <strong>${fmt(b.splitwise_balance)}</strong></span>` : '';
   document.getElementById('balance-main').innerHTML = `
     <div class="balance-card" style="margin-bottom:20px">
-      <div class="label">Expected Bank Balance</div>
+      <div class="label">Net Balance</div>
       <div class="amount">${sign}${fmt(b.expected_balance)}</div>
       <div class="sub">
         <span>Opening <strong>${fmt(b.opening_balance)}</strong></span>
         <span>+ Income <strong>${fmt(b.total_income)}</strong></span>
         <span>− Expenses <strong>${fmt(b.total_expense)}</strong></span>
         <span>− Invested <strong>${fmt(b.total_invested)}</strong></span>
+        ${swSubLine}
       </div>
     </div>`;
+
+  // Splitwise panel
+  renderSplitwisePanel(b);
 
   // Payment method table
   const rows = b.by_payment_method.map(m => {
@@ -1041,6 +1059,72 @@ async function loadBalance() {
   document.getElementById('opening-note').textContent = b.opening_balance
     ? `Current opening balance: ${fmt(b.opening_balance)}`
     : 'No opening balance set.';
+}
+
+function renderSplitwisePanel(b) {
+  const sw = b.splitwise_balance || 0;
+  const lastSynced = b.splitwise_last_synced || '';
+  const breakdown  = b.splitwise_breakdown  || [];
+
+  const breakdownRows = breakdown.map(r => {
+    const color = r.amount >= 0 ? 'var(--green)' : 'var(--red)';
+    return `<tr>
+      <td>${r.name}</td>
+      <td style="text-align:right;font-weight:600;color:${color}">${r.amount >= 0 ? '+' : ''}${fmt(r.amount)}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('splitwise-panel').innerHTML = `
+    <div class="two-col">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="card-title" style="margin-bottom:0">Splitwise</div>
+          <button class="btn btn-primary btn-sm" onclick="syncSplitwise()" id="sw-sync-btn">↻ Sync</button>
+        </div>
+        ${sw !== 0 ? `
+          <div style="font-size:26px;font-weight:800;color:${sw >= 0 ? 'var(--green)' : 'var(--red)'};letter-spacing:-.5px;margin-bottom:4px">
+            ${sw >= 0 ? '+' : ''}${fmt(sw)}
+          </div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:14px">${sw >= 0 ? 'others owe you' : 'you owe others'}${lastSynced ? ' · synced ' + lastSynced : ''}</div>
+          ${breakdownRows ? `<div class="table-wrap"><table style="width:100%"><tbody>${breakdownRows}</tbody></table></div>` : ''}
+        ` : `
+          <p style="color:var(--text2);font-size:13px;margin-bottom:10px">
+            No Splitwise data yet. Hit Sync to fetch your balance.
+          </p>
+          ${lastSynced ? `<p style="font-size:12px;color:var(--text3)">Last synced: ${lastSynced}</p>` : ''}
+        `}
+      </div>
+      <div class="card">
+        <div class="card-title">Connect Splitwise</div>
+        <p style="color:var(--text2);font-size:13px;line-height:1.6;margin-bottom:12px">
+          Add your Splitwise API key as an environment variable on Render:
+        </p>
+        <ol style="font-size:13px;color:var(--text2);padding-left:18px;line-height:2">
+          <li>Go to <strong>splitwise.com/apps/api</strong></li>
+          <li>Click <strong>Register your application</strong></li>
+          <li>Fill any name, set Homepage URL to your Render URL</li>
+          <li>Copy the <strong>API Key</strong> shown</li>
+          <li>In Render → your service → <strong>Environment</strong></li>
+          <li>Add variable: <code style="background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:12px">SPLITWISE_API_KEY</code> = paste key</li>
+          <li>Redeploy → come back and hit <strong>Sync</strong></li>
+        </ol>
+      </div>
+    </div>`;
+}
+
+async function syncSplitwise() {
+  const btn = document.getElementById('sw-sync-btn');
+  if (btn) { btn.textContent = 'Syncing…'; btn.disabled = true; }
+  const r = await api.post('/api/splitwise/sync', {});
+  if (btn) { btn.textContent = '↻ Sync'; btn.disabled = false; }
+  if (r.ok) {
+    toast('Splitwise synced!');
+    loadBalance();
+    loadDashboard();
+  } else {
+    const err = await r.json();
+    toast(err.error || 'Splitwise sync failed.', false);
+  }
 }
 
 async function saveOpeningBalance() {

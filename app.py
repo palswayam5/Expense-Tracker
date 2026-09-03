@@ -116,13 +116,45 @@ def get_balance():
     at             = _tracker.all_time_summary()
     bm             = _tracker.balance_by_payment_method()
     total_invested = _tracker.investment_summary()["total_invested"]
+    sw_bal         = _tracker.splitwise_balance
     return jsonify({
         **at,
-        "opening_balance":  _tracker.opening_balance,
-        "total_invested":   total_invested,
-        "expected_balance": round(_tracker.opening_balance + at["total_income"] - at["total_expense"] - total_invested, 2),
+        "opening_balance":      _tracker.opening_balance,
+        "total_invested":       total_invested,
+        "splitwise_balance":    sw_bal,
+        "splitwise_last_synced":_tracker.splitwise_last_synced,
+        "splitwise_breakdown":  _tracker.splitwise_breakdown,
+        "expected_balance":     round(
+            _tracker.opening_balance + at["total_income"] - at["total_expense"]
+            - total_invested + sw_bal, 2
+        ),
         "by_payment_method": [{"method": k, "amount": v} for k, v in bm.items()],
     })
+
+
+@app.route("/api/splitwise/status", methods=["GET"])
+def splitwise_status():
+    configured = bool(os.environ.get("SPLITWISE_API_KEY"))
+    return jsonify({
+        "configured":    configured,
+        "balance":       _tracker.splitwise_balance,
+        "last_synced":   _tracker.splitwise_last_synced,
+        "breakdown":     _tracker.splitwise_breakdown,
+    })
+
+
+@app.route("/api/splitwise/sync", methods=["POST"])
+def splitwise_sync():
+    api_key = os.environ.get("SPLITWISE_API_KEY")
+    if not api_key:
+        return jsonify({"error": "SPLITWISE_API_KEY not set — add it as an environment variable on Render"}), 400
+    from splitwise_sync import fetch_balance
+    try:
+        result = fetch_balance(api_key)
+        _tracker.update_splitwise_balance(result["net_balance"], result["breakdown"])
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/balance/opening", methods=["PUT"])

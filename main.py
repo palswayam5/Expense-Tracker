@@ -76,6 +76,9 @@ class ExpenseTracker:
         }
         self.opening_balance: float = 0.0
         self.investments_data: dict = {}
+        self.splitwise_balance: float = 0.0
+        self.splitwise_last_synced: str = ""
+        self.splitwise_breakdown: list = []
         self._load()
 
     # ── Persistence ──────────────────────────────────────────────────────────
@@ -90,15 +93,21 @@ class ExpenseTracker:
         ]
         for c in raw.get("categories", []):
             self.categories[c["name"]] = Category(**{**c, "entry_type": c.get("entry_type", "expense")})
-        self.opening_balance = raw.get("opening_balance", 0.0)
-        self.investments_data = raw.get("investments_data", {})
+        self.opening_balance      = raw.get("opening_balance", 0.0)
+        self.investments_data     = raw.get("investments_data", {})
+        self.splitwise_balance    = raw.get("splitwise_balance", 0.0)
+        self.splitwise_last_synced= raw.get("splitwise_last_synced", "")
+        self.splitwise_breakdown  = raw.get("splitwise_breakdown", [])
 
     def _build_data(self) -> dict:
         return {
-            "expenses":         [asdict(e) for e in self.expenses],
-            "categories":       [asdict(c) for c in self.categories.values()],
-            "opening_balance":  self.opening_balance,
-            "investments_data": self.investments_data,
+            "expenses":               [asdict(e) for e in self.expenses],
+            "categories":             [asdict(c) for c in self.categories.values()],
+            "opening_balance":        self.opening_balance,
+            "investments_data":       self.investments_data,
+            "splitwise_balance":      self.splitwise_balance,
+            "splitwise_last_synced":  self.splitwise_last_synced,
+            "splitwise_breakdown":    self.splitwise_breakdown,
         }
 
     def _load(self):
@@ -313,6 +322,12 @@ class ExpenseTracker:
 
     def set_opening_balance(self, amount: float):
         self.opening_balance = round(amount, 2)
+        self._save()
+
+    def update_splitwise_balance(self, net_balance: float, breakdown: list):
+        self.splitwise_balance    = round(net_balance, 2)
+        self.splitwise_last_synced = date.today().isoformat()
+        self.splitwise_breakdown  = breakdown
         self._save()
 
     def balance_by_payment_method(self) -> dict[str, float]:
