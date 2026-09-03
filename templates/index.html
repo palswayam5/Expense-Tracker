@@ -356,6 +356,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
     <a data-view="balance"><span class="icon">💳</span>Balance</a>
     <a data-view="budgets"><span class="icon">🎯</span>Budgets</a>
     <a data-view="invoice"><span class="icon">📄</span>Import PDF</a>
+    <a data-view="investments"><span class="icon">📈</span>Investments</a>
   </nav>
 </aside>
 
@@ -444,6 +445,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
         <option value="">All types</option>
         <option value="expense">Expenses only</option>
         <option value="income">Income only</option>
+        <option value="investment">Investments only</option>
       </select>
     </div>
     <div class="card">
@@ -578,6 +580,60 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
     </div>
   </section>
 
+  <!-- INVESTMENTS -->
+  <section class="view" id="view-investments">
+    <div class="view-header">
+      <h1>Investments</h1>
+      <button class="btn btn-primary" onclick="showAddInvestment()">+ Add Investment</button>
+    </div>
+
+    <!-- Summary stat cards -->
+    <div class="stat-grid" id="inv-stats" style="margin-bottom:20px"></div>
+
+    <!-- Add investment form -->
+    <div id="inv-add-wrap" hidden>
+      <div class="card" style="max-width:600px;margin-bottom:20px">
+        <div class="card-title" style="margin-bottom:16px">New Investment Entry</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Category</label>
+            <select id="inv-f-cat" onchange="onInvCatChange()"></select>
+          </div>
+          <div class="form-group">
+            <label>Amount Invested (₹)</label>
+            <input id="inv-f-amount" type="number" step="0.01" min="0" placeholder="0.00">
+          </div>
+          <div class="form-group full">
+            <label>Fund / Asset Name</label>
+            <input id="inv-f-name" type="text" placeholder="e.g. Axis Bluechip Fund">
+            <div class="chips" id="inv-f-chips"></div>
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input id="inv-f-date" type="date">
+          </div>
+          <div class="form-group">
+            <label>Via (optional)</label>
+            <select id="inv-f-payment"><option value="">— select —</option></select>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="saveInvestment()">Save</button>
+          <button class="btn btn-ghost" onclick="hideAddInvestment()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Holdings table -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="card-title" style="margin-bottom:0">Holdings</div>
+        <span style="font-size:12px;color:var(--text3)">Tab out of a value field to save it</span>
+      </div>
+      <div id="inv-holdings"></div>
+    </div>
+  </section>
+
 </main>
 </div>
 
@@ -626,8 +682,9 @@ function navigate(view) {
   if (view === 'history')   loadHistory();
   if (view === 'summary')   loadSummary();
   if (view === 'balance')   loadBalance();
-  if (view === 'budgets')   loadBudgets();
-  if (view === 'invoice')   resetInvoice();
+  if (view === 'budgets')      loadBudgets();
+  if (view === 'invoice')      resetInvoice();
+  if (view === 'investments')  loadInvestments();
 }
 
 document.querySelectorAll('nav a').forEach(a => {
@@ -1117,6 +1174,158 @@ function resetInvoice() {
   document.getElementById('inv-upload-card').hidden  = false;
   document.getElementById('inv-preview-card').hidden = true;
   document.getElementById('inv-success-card').hidden = true;
+}
+
+// ── Investments ──────────────────────────────────────────────────────────────
+async function loadInvestments() {
+  const s = await api.get('/api/investments/summary');
+
+  const hasVals = s.total_current_value > 0;
+  const retColor = s.total_returns >= 0 ? 'green' : 'red';
+
+  document.getElementById('inv-stats').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Total Invested</div>
+      <div class="stat-value indigo">${fmt(s.total_invested)}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">${s.funds_count} fund${s.funds_count !== 1 ? 's' : ''} · ${s.entries_count} SIP${s.entries_count !== 1 ? 's' : ''}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Current Value</div>
+      <div class="stat-value ${hasVals ? 'green' : ''}" style="${hasVals ? '' : 'color:var(--text3)'}">${hasVals ? fmt(s.total_current_value) : '—'}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">${hasVals ? 'marked to market' : 'set values below'}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Unrealised Returns</div>
+      <div class="stat-value ${hasVals ? retColor : ''}" style="${hasVals ? '' : 'color:var(--text3)'}">${hasVals ? (s.total_returns >= 0 ? '+' : '') + fmt(s.total_returns) : '—'}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">XIRR (approx)</div>
+      <div class="stat-value ${hasVals ? retColor : ''}" style="${hasVals ? '' : 'color:var(--text3)'}">
+        ${hasVals ? (s.returns_pct >= 0 ? '+' : '') + s.returns_pct + '%' : '—'}
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">${hasVals ? 'absolute return' : ''}</div>
+    </div>`;
+
+  renderHoldings(s.by_fund);
+}
+
+function renderHoldings(funds) {
+  const el = document.getElementById('inv-holdings');
+  if (!funds || !funds.length) {
+    el.innerHTML = `<div class="empty">
+      <div class="icon" style="font-size:36px">📈</div>
+      <p>No investments yet. Hit <strong>+ Add Investment</strong> above to start.</p>
+    </div>`;
+    return;
+  }
+
+  const rows = funds.map(f => {
+    const hasVal = f.current_value > 0;
+    const rc = f.returns >= 0 ? 'var(--green)' : 'var(--red)';
+    const safeId = f.fund.replace(/[^a-zA-Z0-9]/g, '_');
+    return `<tr>
+      <td>
+        <div style="font-weight:600;white-space:nowrap">${f.fund}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">${f.category}</div>
+      </td>
+      <td style="text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${fmt(f.total_invested)}</td>
+      <td style="text-align:right">
+        <input type="number" step="0.01" min="0"
+          id="inv-val-${safeId}"
+          value="${f.current_value || ''}"
+          placeholder="tap to enter"
+          style="width:130px;text-align:right;padding:5px 8px;font-size:13px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)"
+          onblur="saveFundValue(${JSON.stringify(f.fund)}, this.value)"
+          title="Enter current market value of your entire holding in this fund">
+      </td>
+      <td style="text-align:right;font-weight:600;font-variant-numeric:tabular-nums;color:${hasVal ? rc : 'var(--text3)'}">
+        ${hasVal ? (f.returns >= 0 ? '+' : '') + fmt(f.returns) : '—'}
+      </td>
+      <td style="text-align:right;font-weight:700;font-size:14px;color:${hasVal ? rc : 'var(--text3)'}">
+        ${hasVal ? (f.returns_pct >= 0 ? '+' : '') + f.returns_pct + '%' : '—'}
+      </td>
+      <td style="color:var(--text3);font-size:12px;white-space:nowrap">${f.entries} entr${f.entries !== 1 ? 'ies' : 'y'}</td>
+      <td style="color:var(--text3);font-size:11px;white-space:nowrap">${f.last_date || ''}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `<div class="table-wrap">
+    <table style="width:100%">
+      <thead><tr>
+        <th>Fund / Asset</th>
+        <th style="text-align:right">Invested</th>
+        <th style="text-align:right">Current Value</th>
+        <th style="text-align:right">Returns</th>
+        <th style="text-align:right">Return %</th>
+        <th>Entries</th>
+        <th>Last SIP</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+async function saveFundValue(fundName, val) {
+  const v = parseFloat(val);
+  if (isNaN(v) || v < 0) return;
+  const r = await api.put('/api/investments/fund/' + encodeURIComponent(fundName) + '/value', { current_value: v });
+  if (r.ok) { toast('Value updated!'); loadInvestments(); }
+  else toast('Could not save value.', false);
+}
+
+async function showAddInvestment() {
+  document.getElementById('inv-add-wrap').hidden = false;
+  if (!S.meta.payment_methods.length) S.meta = await api.get('/api/meta');
+  const cats = await api.get('/api/categories?type=investment');
+  const catSel = document.getElementById('inv-f-cat');
+  catSel.innerHTML = cats.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+  document.getElementById('inv-f-date').value = today();
+  document.getElementById('inv-f-payment').innerHTML = '<option value="">— select —</option>' +
+    S.meta.payment_methods.map(m => `<option>${m}</option>`).join('');
+  onInvCatChange();
+}
+
+function hideAddInvestment() {
+  document.getElementById('inv-add-wrap').hidden = true;
+}
+
+function onInvCatChange() {
+  const cat   = document.getElementById('inv-f-cat').value;
+  const chips = document.getElementById('inv-f-chips');
+  const suggs = (S.meta.category_suggestions || {})[cat] || [];
+  chips.innerHTML = suggs.map(s =>
+    `<span class="chip" onclick="selectInvChip(this,${JSON.stringify(s)})">${s}</span>`
+  ).join('');
+}
+
+function selectInvChip(el, text) {
+  document.querySelectorAll('#inv-f-chips .chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('inv-f-name').value = text;
+}
+
+async function saveInvestment() {
+  const cat    = document.getElementById('inv-f-cat').value;
+  const amount = parseFloat(document.getElementById('inv-f-amount').value);
+  const name   = document.getElementById('inv-f-name').value.trim();
+  const d      = document.getElementById('inv-f-date').value;
+  const pay    = document.getElementById('inv-f-payment').value;
+  if (!cat || !amount || !name || !d) { toast('Fill in all required fields.', false); return; }
+  const r = await api.post('/api/expenses', {
+    amount, category: cat, description: name,
+    date: d, entry_type: 'investment',
+    payment_method: pay, quantity: 1,
+  });
+  if (r.ok) {
+    toast('Investment saved!');
+    document.getElementById('inv-f-amount').value = '';
+    document.getElementById('inv-f-name').value   = '';
+    hideAddInvestment();
+    loadInvestments();
+  } else {
+    const err = await r.json();
+    toast(err.error || 'Error saving.', false);
+  }
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────

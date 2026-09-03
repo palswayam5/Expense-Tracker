@@ -177,6 +177,21 @@ def import_invoice():
     return jsonify({"count": len(imported), "expenses": imported})
 
 
+@app.route("/api/investments/summary", methods=["GET"])
+def investment_summary():
+    return jsonify(_tracker.investment_summary())
+
+
+@app.route("/api/investments/fund/<path:fund_name>/value", methods=["PUT"])
+def update_fund_value(fund_name):
+    d = request.get_json(force=True)
+    try:
+        _tracker.update_fund_value(fund_name, float(d["current_value"]))
+        return jsonify({"ok": True})
+    except (ValueError, KeyError) as err:
+        return jsonify({"error": str(err)}), 400
+
+
 @app.route("/api/months", methods=["GET"])
 def get_months():
     months = sorted({e.date[:7] for e in _tracker.expenses}, reverse=True)

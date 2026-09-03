@@ -55,6 +55,15 @@ DEFAULT_CATEGORIES = [
     Category("Salary",            0.0,  "income"),
     Category("Freelance",         0.0,  "income"),
     Category("Other Income",      0.0,  "income"),
+    # investment categories
+    Category("Mutual Fund – Equity", 0.0, "investment"),
+    Category("Mutual Fund – Debt",   0.0, "investment"),
+    Category("Mutual Fund – ELSS",   0.0, "investment"),
+    Category("Stocks & ETFs",        0.0, "investment"),
+    Category("Fixed Deposit",        0.0, "investment"),
+    Category("PPF / NPS",            0.0, "investment"),
+    Category("Gold",                 0.0, "investment"),
+    Category("Crypto",               0.0, "investment"),
 ]
 
 
@@ -66,6 +75,7 @@ class ExpenseTracker:
             c.name: c for c in DEFAULT_CATEGORIES
         }
         self.opening_balance: float = 0.0
+        self.investments_data: dict = {}
         self._load()
 
     # ── Persistence ──────────────────────────────────────────────────────────
@@ -81,12 +91,14 @@ class ExpenseTracker:
         for c in raw.get("categories", []):
             self.categories[c["name"]] = Category(**{**c, "entry_type": c.get("entry_type", "expense")})
         self.opening_balance = raw.get("opening_balance", 0.0)
+        self.investments_data = raw.get("investments_data", {})
 
     def _build_data(self) -> dict:
         return {
-            "expenses":        [asdict(e) for e in self.expenses],
-            "categories":      [asdict(c) for c in self.categories.values()],
-            "opening_balance": self.opening_balance,
+            "expenses":         [asdict(e) for e in self.expenses],
+            "categories":       [asdict(c) for c in self.categories.values()],
+            "opening_balance":  self.opening_balance,
+            "investments_data": self.investments_data,
         }
 
     def _load(self):
@@ -312,6 +324,73 @@ class ExpenseTracker:
                 totals[key] += e.total
         return {k: round(v, 2) for k, v in sorted(totals.items(), key=lambda x: -x[1])}
 
+    def update_fund_value(self, fund_name: str, current_value: float):
+        self.investments_data[fund_name] = {
+            "current_value": round(current_value, 2),
+            "last_updated":  date.today().isoformat(),
+        }
+        self._save()
+
+    def investment_summary(self) -> dict:
+        investments = [e for e in self.expenses if e.entry_type == "investment"]
+
+        by_fund: dict[str, dict] = {}
+        for e in investments:
+            fund = e.description or "Unknown"
+            if fund not in by_fund:
+                by_fund[fund] = {
+                    "fund":           fund,
+                    "category":       e.category,
+                    "total_invested": 0.0,
+                    "entries":        0,
+                    "first_date":     e.date,
+                    "last_date":      e.date,
+                }
+            by_fund[fund]["total_invested"] += e.total
+            by_fund[fund]["entries"]        += 1
+            if e.date < by_fund[fund]["first_date"]:
+                by_fund[fund]["first_date"] = e.date
+            if e.date > by_fund[fund]["last_date"]:
+                by_fund[fund]["last_date"] = e.date
+
+        fund_list = []
+        total_invested = 0.0
+        total_current  = 0.0
+
+        for fund, data in sorted(by_fund.items()):
+            invested  = round(data["total_invested"], 2)
+            inv_meta  = self.investments_data.get(fund, {})
+            cur_val   = inv_meta.get("current_value", 0.0)
+            returns   = round(cur_val - invested, 2) if cur_val else 0.0
+            ret_pct   = round(returns / invested * 100, 1) if invested and cur_val else 0.0
+
+            fund_list.append({
+                **data,
+                "total_invested": invested,
+                "current_value":  cur_val,
+                "returns":        returns,
+                "returns_pct":    ret_pct,
+                "last_updated":   inv_meta.get("last_updated"),
+            })
+            total_invested += invested
+            if cur_val:
+                total_current += cur_val
+
+        total_invested     = round(total_invested, 2)
+        total_current_val  = round(total_current, 2)
+        total_returns      = round(total_current_val - total_invested, 2) if total_current_val else 0.0
+        overall_pct        = round(total_returns / total_invested * 100, 1) if total_invested and total_current_val else 0.0
+
+        return {
+            "total_invested":     total_invested,
+            "total_current_value":total_current_val,
+            "total_returns":      total_returns,
+            "returns_pct":        overall_pct,
+            "funds_count":        len(by_fund),
+            "entries_count":      len(investments),
+            "by_fund":            sorted(fund_list, key=lambda x: -x["total_invested"]),
+        }
+
     def spending_by_tag(self, month: Optional[str] = None) -> dict[str, float]:
         month = month or date.today().strftime("%Y-%m")
         totals: dict[str, float] = defaultdict(float)
@@ -444,9 +523,17 @@ CATEGORY_SUGGESTIONS: dict[str, list[str]] = {
     "Health":         ["Medicine", "Doctor visit", "Lab test", "Gym/Fitness", "Insurance premium"],
     "Shopping":       ["Clothes", "Electronics", "Books", "Home decor", "Personal care"],
     "Family/Home":    ["Money sent home", "Groceries for family", "House maintenance", "Family event"],
-    "Loan Repayment": ["Home loan EMI", "Car loan EMI", "Personal loan EMI", "Education loan EMI", "Credit card due"],
-    "Salary":         ["Monthly salary", "Bonus", "Arrears"],
-    "Freelance":      ["Project payment", "Consulting fee", "Part-time work"],
+    "Loan Repayment":       ["Home loan EMI", "Car loan EMI", "Personal loan EMI", "Education loan EMI", "Credit card due"],
+    "Salary":               ["Monthly salary", "Bonus", "Arrears"],
+    "Freelance":            ["Project payment", "Consulting fee", "Part-time work"],
+    "Mutual Fund – Equity": ["Axis Bluechip Fund", "Mirae Asset Large Cap", "Parag Parikh Flexi Cap", "Nifty 50 Index Fund", "Nifty Next 50 Index"],
+    "Mutual Fund – Debt":   ["HDFC Short Term Debt", "SBI Magnum Medium Duration", "Liquid Fund"],
+    "Mutual Fund – ELSS":   ["Axis ELSS Tax Saver", "Mirae Asset ELSS", "Quant ELSS Tax Saver"],
+    "Stocks & ETFs":        ["Nifty 50 ETF", "Nifty Next 50 ETF", "Nifty IT ETF", "Individual Stock"],
+    "Fixed Deposit":        ["SBI FD", "HDFC FD", "ICICI FD", "Post Office FD"],
+    "PPF / NPS":            ["PPF", "NPS – Tier 1", "NPS – Tier 2"],
+    "Gold":                 ["Sovereign Gold Bond", "Digital Gold", "Gold ETF"],
+    "Crypto":               ["Bitcoin", "Ethereum", "SIP via CoinDCX"],
 }
 
 
