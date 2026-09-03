@@ -159,8 +159,9 @@ def parse_invoice_upload():
 @app.route("/api/invoice/import", methods=["POST"])
 def import_invoice():
     d = request.get_json(force=True)
-    inv   = d["invoice"]
-    items = d["items"]
+    inv            = d["invoice"]
+    items          = d["items"]
+    payment_method = d.get("payment_method", "")
     imported = []
     for item in items:
         e = _tracker.add_expense(
@@ -170,6 +171,7 @@ def import_invoice():
             date           = inv["date"],
             tags           = ["invoice"],
             quantity       = item["qty"],
+            payment_method = payment_method,
         )
         imported.append(_e(e))
     return jsonify({"count": len(imported), "expenses": imported})

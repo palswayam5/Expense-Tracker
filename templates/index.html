@@ -546,18 +546,23 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
           <table style="width:100%">
             <thead>
               <tr>
-                <th>#</th><th>Item</th><th style="text-align:right">Qty</th>
+                <th><input type="checkbox" id="inv-check-all" checked onchange="toggleAllItems(this.checked)"></th>
+                <th>Item</th><th style="text-align:right">Qty</th>
                 <th style="text-align:right">Total ₹</th><th>Category</th>
               </tr>
             </thead>
             <tbody id="inv-items-body"></tbody>
           </table>
         </div>
+        <div style="margin-top:14px;display:flex;align-items:center;gap:12px">
+          <label style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">Paid via</label>
+          <select id="inv-payment" style="max-width:180px;padding:7px 10px;font-size:13px"></select>
+        </div>
         <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-          <span style="font-weight:700" id="inv-total"></span>
+          <span style="font-weight:700;font-size:13px" id="inv-total"></span>
           <div style="display:flex;gap:8px">
             <button class="btn btn-ghost" onclick="resetInvoice()">Cancel</button>
-            <button class="btn btn-primary" onclick="importInvoice()">Import All Items</button>
+            <button class="btn btn-primary" onclick="importInvoice()">Import Selected</button>
           </div>
         </div>
       </div>
@@ -1029,8 +1034,16 @@ async function uploadInvoice() {
 }
 
 async function renderInvoicePreview(inv) {
-  const cats = await api.get('/api/categories?type=expense');
+  const [cats, meta] = await Promise.all([
+    api.get('/api/categories?type=expense'),
+    api.get('/api/meta'),
+  ]);
   const catNames = cats.map(c => c.name);
+
+  // Payment method dropdown
+  const pmSel = document.getElementById('inv-payment');
+  pmSel.innerHTML = '<option value="">— select —</option>' +
+    meta.payment_methods.map(m => `<option>${m}</option>`).join('');
 
   document.getElementById('inv-upload-card').hidden  = true;
   document.getElementById('inv-preview-card').hidden = false;
@@ -1040,8 +1053,8 @@ async function renderInvoicePreview(inv) {
     `<strong>${inv.vendor || 'Invoice'}</strong> &nbsp;·&nbsp; ${inv.date} &nbsp;·&nbsp; ${inv.items.length} items`;
 
   document.getElementById('inv-items-body').innerHTML = inv.items.map((item, i) => `
-    <tr>
-      <td style="color:var(--text3)">${i + 1}</td>
+    <tr id="inv-row-${i}">
+      <td><input type="checkbox" checked onchange="updateInvoiceTotal()"></td>
       <td style="font-size:13px">${item.name}</td>
       <td style="text-align:right">${item.qty}</td>
       <td style="text-align:right;font-weight:600">${fmt(item.amount)}</td>
@@ -1052,21 +1065,46 @@ async function renderInvoicePreview(inv) {
       </td>
     </tr>`).join('');
 
-  document.getElementById('inv-total').textContent = `Total: ${fmt(inv.total)}`;
+  updateInvoiceTotal();
+}
+
+function toggleAllItems(checked) {
+  document.querySelectorAll('#inv-items-body input[type=checkbox]').forEach(cb => cb.checked = checked);
+  updateInvoiceTotal();
+}
+
+function updateInvoiceTotal() {
+  if (!_invoiceData) return;
+  const checkboxes = [...document.querySelectorAll('#inv-items-body input[type=checkbox]')];
+  const selected = checkboxes.filter(cb => cb.checked).length;
+  const total = _invoiceData.items
+    .filter((_, i) => checkboxes[i]?.checked)
+    .reduce((s, item) => s + item.amount, 0);
+  document.getElementById('inv-total').textContent =
+    `${selected} of ${_invoiceData.items.length} items selected  ·  ${fmt(total)}`;
+  // sync "check all" indeterminate state
+  const all = document.getElementById('inv-check-all');
+  if (all) { all.indeterminate = selected > 0 && selected < _invoiceData.items.length; all.checked = selected === _invoiceData.items.length; }
 }
 
 async function importInvoice() {
   if (!_invoiceData) return;
+  const checkboxes = [...document.querySelectorAll('#inv-items-body input[type=checkbox]')];
+  const selectedItems = _invoiceData.items.filter((_, i) => checkboxes[i]?.checked);
+  if (!selectedItems.length) { toast('Select at least one item.', false); return; }
+
+  const payment = document.getElementById('inv-payment').value;
   const r = await api.post('/api/invoice/import', {
-    invoice: { date: _invoiceData.date, vendor: _invoiceData.vendor },
-    items:   _invoiceData.items,
+    invoice:        { date: _invoiceData.date, vendor: _invoiceData.vendor },
+    items:          selectedItems,
+    payment_method: payment,
   });
   if (r.ok) {
     const res = await r.json();
     document.getElementById('inv-preview-card').hidden = true;
     document.getElementById('inv-success-card').hidden = false;
     document.getElementById('inv-success-msg').textContent =
-      `${res.count} items imported from ${_invoiceData.vendor || 'invoice'}`;
+      `${res.count} item${res.count !== 1 ? 's' : ''} imported from ${_invoiceData.vendor || 'invoice'}`;
     toast(`Imported ${res.count} items!`);
   } else {
     toast('Import failed.', false);
