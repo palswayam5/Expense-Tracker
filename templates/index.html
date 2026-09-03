@@ -705,7 +705,7 @@ async function loadDashboard() {
   // Balance card
   const sign  = balance.expected_balance >= 0 ? '+' : '';
   const swLine = balance.splitwise_balance > 0
-    ? `<span>+ Splitwise <strong>${fmt(balance.splitwise_balance)}</strong></span>` : '';
+    ? `<span>− Splitwise <strong>${fmt(balance.splitwise_balance)}</strong></span>` : '';
   document.getElementById('dash-balance').innerHTML = `
     <div class="balance-card" style="margin-bottom:20px">
       <div class="label">Net Balance</div>
@@ -757,7 +757,7 @@ async function loadDashboard() {
     <div class="stat-card">
       <div class="stat-label">Net Balance</div>
       <div class="stat-value ${bankBal >= 0 ? 'indigo' : 'red'}">${bankBal >= 0 ? '+' : ''}${fmt(bankBal)}</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:3px">bank${sw > 0 ? ' + splitwise' : ''}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:3px">bank${sw > 0 ? ' − splitwise' : ''}</div>
     </div>`;
 
   // Budget bars
@@ -1092,7 +1092,7 @@ async function loadBalance() {
 
   const sign = b.expected_balance >= 0 ? '+' : '';
   const swSubLine = b.splitwise_balance > 0
-    ? `<span>+ Splitwise <strong>${fmt(b.splitwise_balance)}</strong></span>` : '';
+    ? `<span>− Splitwise <strong>${fmt(b.splitwise_balance)}</strong></span>` : '';
   document.getElementById('balance-main').innerHTML = `
     <div class="balance-card" style="margin-bottom:20px">
       <div class="label">Net Balance</div>

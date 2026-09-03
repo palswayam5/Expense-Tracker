@@ -126,7 +126,7 @@ def get_balance():
         "splitwise_breakdown":  _tracker.splitwise_breakdown,
         "expected_balance":     round(
             _tracker.opening_balance + at["total_income"] - at["total_expense"]
-            - total_invested + sw_bal, 2
+            - total_invested - sw_bal, 2
         ),
         "by_payment_method": [{"method": k, "amount": v} for k, v in bm.items()],
     })
