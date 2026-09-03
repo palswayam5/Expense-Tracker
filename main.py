@@ -258,7 +258,10 @@ class ExpenseTracker:
             results = [e for e in results if e.date.startswith(month)]
         if tag:
             results = [e for e in results if tag in e.tags]
-        return sorted(results, key=lambda e: e.date, reverse=True)
+        # newest date first; within the same date, most recently added first
+        indexed = list(enumerate(results))
+        indexed.sort(key=lambda pair: (pair[1].date, pair[0]), reverse=True)
+        return [e for _, e in indexed]
 
     # ── Email import ─────────────────────────────────────────────────────────
 
