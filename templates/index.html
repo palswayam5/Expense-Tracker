@@ -355,6 +355,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
     <a data-view="summary"><span class="icon">📊</span>Summary</a>
     <a data-view="balance"><span class="icon">💳</span>Balance</a>
     <a data-view="budgets"><span class="icon">🎯</span>Budgets</a>
+    <a data-view="invoice"><span class="icon">📄</span>Import PDF</a>
   </nav>
 </aside>
 
@@ -521,6 +522,57 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); }
     </div>
   </section>
 
+  <!-- IMPORT PDF -->
+  <section class="view" id="view-invoice">
+    <div class="view-header"><h1>Import Invoice (PDF)</h1></div>
+
+    <!-- Step 1: Upload -->
+    <div class="card" style="max-width:560px" id="inv-upload-card">
+      <p style="color:var(--text2);font-size:13px;margin-bottom:16px">
+        Upload a Zepto / Blinkit / Swiggy Instamart invoice PDF. Items are auto-categorised and you can fix any before saving.
+      </p>
+      <div class="form-group" style="margin-bottom:16px">
+        <label>PDF File</label>
+        <input type="file" id="inv-file" accept=".pdf">
+      </div>
+      <button class="btn btn-primary" onclick="uploadInvoice()">Parse Invoice</button>
+    </div>
+
+    <!-- Step 2: Preview -->
+    <div id="inv-preview-card" hidden>
+      <div class="card" style="margin-bottom:16px">
+        <div id="inv-meta" style="margin-bottom:12px;font-size:13px;color:var(--text2)"></div>
+        <div class="table-wrap">
+          <table style="width:100%">
+            <thead>
+              <tr>
+                <th>#</th><th>Item</th><th style="text-align:right">Qty</th>
+                <th style="text-align:right">Total ₹</th><th>Category</th>
+              </tr>
+            </thead>
+            <tbody id="inv-items-body"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:700" id="inv-total"></span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost" onclick="resetInvoice()">Cancel</button>
+            <button class="btn btn-primary" onclick="importInvoice()">Import All Items</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Success -->
+    <div id="inv-success-card" hidden>
+      <div class="card" style="max-width:400px;text-align:center;padding:32px">
+        <div style="font-size:40px;margin-bottom:12px">✅</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px" id="inv-success-msg"></div>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="resetInvoice()">Import Another</button>
+      </div>
+    </div>
+  </section>
+
 </main>
 </div>
 
@@ -570,6 +622,7 @@ function navigate(view) {
   if (view === 'summary')   loadSummary();
   if (view === 'balance')   loadBalance();
   if (view === 'budgets')   loadBudgets();
+  if (view === 'invoice')   resetInvoice();
 }
 
 document.querySelectorAll('nav a').forEach(a => {
@@ -946,6 +999,86 @@ async function saveBudget(name, val) {
   const budget = parseFloat(val) || 0;
   await api.put(`/api/categories/${encodeURIComponent(name)}/budget`, { budget });
   toast(`Budget for ${name} updated.`);
+}
+
+// ── Invoice import ───────────────────────────────────────────────────────────
+let _invoiceData = null;
+
+async function uploadInvoice() {
+  const file = document.getElementById('inv-file').files[0];
+  if (!file) { toast('Choose a PDF file first.', false); return; }
+
+  const btn = document.querySelector('#inv-upload-card .btn-primary');
+  btn.textContent = 'Parsing…';
+  btn.disabled = true;
+
+  const form = new FormData();
+  form.append('file', file);
+  const r = await fetch('/api/invoice/parse', { method: 'POST', body: form });
+  btn.textContent = 'Parse Invoice';
+  btn.disabled = false;
+
+  if (!r.ok) {
+    const err = await r.json();
+    toast(err.error || 'Parse failed.', false);
+    return;
+  }
+
+  _invoiceData = await r.json();
+  renderInvoicePreview(_invoiceData);
+}
+
+async function renderInvoicePreview(inv) {
+  const cats = await api.get('/api/categories?type=expense');
+  const catNames = cats.map(c => c.name);
+
+  document.getElementById('inv-upload-card').hidden  = true;
+  document.getElementById('inv-preview-card').hidden = false;
+  document.getElementById('inv-success-card').hidden = true;
+
+  document.getElementById('inv-meta').innerHTML =
+    `<strong>${inv.vendor || 'Invoice'}</strong> &nbsp;·&nbsp; ${inv.date} &nbsp;·&nbsp; ${inv.items.length} items`;
+
+  document.getElementById('inv-items-body').innerHTML = inv.items.map((item, i) => `
+    <tr>
+      <td style="color:var(--text3)">${i + 1}</td>
+      <td style="font-size:13px">${item.name}</td>
+      <td style="text-align:right">${item.qty}</td>
+      <td style="text-align:right;font-weight:600">${fmt(item.amount)}</td>
+      <td>
+        <select onchange="_invoiceData.items[${i}].category=this.value" style="padding:4px 8px;font-size:12px">
+          ${catNames.map(c => `<option ${c === item.category ? 'selected' : ''}>${c}</option>`).join('')}
+        </select>
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('inv-total').textContent = `Total: ${fmt(inv.total)}`;
+}
+
+async function importInvoice() {
+  if (!_invoiceData) return;
+  const r = await api.post('/api/invoice/import', {
+    invoice: { date: _invoiceData.date, vendor: _invoiceData.vendor },
+    items:   _invoiceData.items,
+  });
+  if (r.ok) {
+    const res = await r.json();
+    document.getElementById('inv-preview-card').hidden = true;
+    document.getElementById('inv-success-card').hidden = false;
+    document.getElementById('inv-success-msg').textContent =
+      `${res.count} items imported from ${_invoiceData.vendor || 'invoice'}`;
+    toast(`Imported ${res.count} items!`);
+  } else {
+    toast('Import failed.', false);
+  }
+}
+
+function resetInvoice() {
+  _invoiceData = null;
+  document.getElementById('inv-file').value = '';
+  document.getElementById('inv-upload-card').hidden  = false;
+  document.getElementById('inv-preview-card').hidden = true;
+  document.getElementById('inv-success-card').hidden = true;
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────

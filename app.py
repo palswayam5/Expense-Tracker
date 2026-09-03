@@ -133,6 +133,48 @@ def set_opening():
         return jsonify({"error": str(err)}), 400
 
 
+@app.route("/api/invoice/parse", methods=["POST"])
+def parse_invoice_upload():
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    f = request.files["file"]
+    if not f.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Only PDF files are supported"}), 400
+    import tempfile
+    from invoice_importer import parse_invoice
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        f.save(tmp.name)
+        tmp_path = tmp.name
+    try:
+        inv = parse_invoice(tmp_path)
+    except RuntimeError as err:
+        return jsonify({"error": str(err)}), 400
+    except Exception as err:
+        return jsonify({"error": f"Could not parse PDF: {err}"}), 400
+    finally:
+        os.unlink(tmp_path)
+    return jsonify(inv)
+
+
+@app.route("/api/invoice/import", methods=["POST"])
+def import_invoice():
+    d = request.get_json(force=True)
+    inv   = d["invoice"]
+    items = d["items"]
+    imported = []
+    for item in items:
+        e = _tracker.add_expense(
+            amount         = item["unit_price"],
+            category       = item["category"],
+            description    = item["name"],
+            date           = inv["date"],
+            tags           = ["invoice"],
+            quantity       = item["qty"],
+        )
+        imported.append(_e(e))
+    return jsonify({"count": len(imported), "expenses": imported})
+
+
 @app.route("/api/months", methods=["GET"])
 def get_months():
     months = sorted({e.date[:7] for e in _tracker.expenses}, reverse=True)
