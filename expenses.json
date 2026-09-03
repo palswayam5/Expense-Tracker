@@ -446,7 +446,51 @@
       "name": "Other Income",
       "monthly_budget": 0.0,
       "entry_type": "income"
+    },
+    {
+      "name": "Mutual Fund \u2013 Equity",
+      "monthly_budget": 0.0,
+      "entry_type": "investment"
+    },
+    {
+      "name": "Mutual Fund \u2013 Debt",
+      "monthly_budget": 0.0,
+      "entry_type": "investment"
+    },
+    {
+      "name": "Mutual Fund \u2013 ELSS",
+      "monthly_budget": 0.0,
+      "entry_type": "investment"
+    },
+    {
+      "name": "Stocks & ETFs",
+      "monthly_budget": 0.0,
+      "entry_type": "investment"
+    },
+    {
+      "name": "Fixed Deposit",
+      "monthly_budget": 0.0,
+      "entry_type": "investment"
+    },
+    {
+      "name": "PPF / NPS",
+      "monthly_budget": 0.0,
+      "entry_type": "investment"
+    },
+    {
+      "name": "Gold",
+      "monthly_budget": 0.0,
+      "entry_type": "investment"
+    },
+    {
+      "name": "Crypto",
+      "monthly_budget": 0.0,
+      "entry_type": "investment"
     }
   ],
-  "opening_balance": 0.0
+  "opening_balance": 0.0,
+  "investments_data": {},
+  "splitwise_balance": 0,
+  "splitwise_last_synced": "2026-09-03",
+  "splitwise_breakdown": []
 }
