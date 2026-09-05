@@ -1055,7 +1055,16 @@ def cmd_sync_splitwise(tracker: ExpenseTracker):
     GREEN = "\033[32m"
     RED   = "\033[31m"
     BOLD  = "\033[1m"
+    DIM   = "\033[2m"
     RESET = "\033[0m"
+
+    print("\n  1. Scan Gmail for Splitwise emails")
+    print("  2. Enter balance manually")
+    mode = _ask("  Choice [1]: ").strip() or "1"
+
+    if mode == "2":
+        _cmd_splitwise_manual(tracker, GREEN, RED, BOLD, DIM, RESET)
+        return
 
     print("\n  Scanning Splitwise emails from Gmail…")
     try:
@@ -1082,6 +1091,50 @@ def cmd_sync_splitwise(tracker: ExpenseTracker):
     confirm = _ask(f"\n  Save this balance? (y/n): ").strip().lower()
     if confirm == "y":
         tracker.update_splitwise_balance(net, result["breakdown"])
+        print(f"  {GREEN}Saved.{RESET}")
+    else:
+        print("  Cancelled.")
+
+
+def _cmd_splitwise_manual(tracker: ExpenseTracker, GREEN, RED, BOLD, DIM, RESET):
+    print(f"\n  {DIM}Positive = others owe you  |  Negative = you owe others{RESET}")
+
+    breakdown = []
+    print("  Enter per-person balances (blank name to finish):\n")
+    while True:
+        name = _ask("  Person name (blank to finish): ").strip()
+        if not name:
+            break
+        raw = _ask(f"  Amount for {name} (₹, use – for negative): ").strip().replace("–", "-").replace("—", "-")
+        try:
+            amount = round(float(raw), 2)
+        except ValueError:
+            print("  Invalid amount, skipping.")
+            continue
+        breakdown.append({"name": name, "amount": amount})
+
+    if breakdown:
+        net = round(sum(r["amount"] for r in breakdown), 2)
+    else:
+        raw = _ask("  Net balance (₹, use – for negative): ").strip().replace("–", "-").replace("—", "-")
+        try:
+            net = round(float(raw), 2)
+        except ValueError:
+            print("  Invalid amount.")
+            return
+
+    color = GREEN if net >= 0 else RED
+    sign  = "+" if net >= 0 else ""
+    print(f"\n  {color}{BOLD}Splitwise balance: {sign}₹{net:,.2f}{RESET}")
+    if breakdown:
+        for r in breakdown:
+            c2   = GREEN if r["amount"] >= 0 else RED
+            s2   = "+" if r["amount"] >= 0 else ""
+            print(f"    {r['name']:<20} {c2}{s2}₹{r['amount']:,.2f}{RESET}")
+
+    confirm = _ask("\n  Save? (y/n): ").strip().lower()
+    if confirm == "y":
+        tracker.update_splitwise_balance(net, breakdown)
         print(f"  {GREEN}Saved.{RESET}")
     else:
         print("  Cancelled.")

@@ -1164,11 +1164,14 @@ function renderSplitwisePanel(b) {
         `}
         <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
           <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:8px">Or set manually</div>
-          <div style="display:flex;gap:8px">
+          <div id="sw-manual-rows"></div>
+          <button class="btn btn-ghost btn-sm" onclick="addSWManualRow()">+ Add person</button>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+            <span style="font-size:12px;color:var(--text2)">Net</span>
             <input id="sw-manual-input" type="number" step="0.01" placeholder="${sw || '0.00'}" style="max-width:150px">
             <button class="btn btn-ghost btn-sm" onclick="saveSWManual()">Set</button>
           </div>
-          <p style="font-size:11px;color:var(--text3);margin-top:6px">Positive = others owe you · Negative = you owe others</p>
+          <p style="font-size:11px;color:var(--text3);margin-top:6px">Positive = others owe you · Negative = you owe others. Add people for a per-person breakdown, or just set the net amount.</p>
         </div>
       </div>
       <div class="card">
@@ -1183,6 +1186,47 @@ function renderSplitwisePanel(b) {
         </ol>
       </div>
     </div>`;
+
+  swManualRows = [];
+  renderSWManualRows();
+}
+
+let swManualRows = [];
+
+function renderSWManualRows() {
+  const el = document.getElementById('sw-manual-rows');
+  if (!el) return;
+  el.innerHTML = swManualRows.map((r, i) => `
+    <div style="display:flex;gap:8px;margin-bottom:6px">
+      <input type="text" placeholder="Name" value="${(r.name || '').replace(/"/g, '&quot;')}"
+        oninput="swManualRows[${i}].name = this.value" style="flex:1">
+      <input type="number" step="0.01" placeholder="Amount" value="${r.amount}"
+        oninput="swManualRows[${i}].amount = this.value; updateSWManualNet()" style="width:110px">
+      <button class="btn btn-ghost btn-sm" onclick="removeSWManualRow(${i})">✕</button>
+    </div>`).join('');
+  updateSWManualNet();
+}
+
+function addSWManualRow() {
+  swManualRows.push({ name: '', amount: '' });
+  renderSWManualRows();
+}
+
+function removeSWManualRow(i) {
+  swManualRows.splice(i, 1);
+  renderSWManualRows();
+}
+
+function updateSWManualNet() {
+  const input = document.getElementById('sw-manual-input');
+  if (!input) return;
+  if (swManualRows.length) {
+    const net = swManualRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+    input.value = net.toFixed(2);
+    input.readOnly = true;
+  } else {
+    input.readOnly = false;
+  }
 }
 
 async function syncSplitwise() {
@@ -1202,9 +1246,16 @@ async function syncSplitwise() {
 }
 
 async function saveSWManual() {
-  const val = parseFloat(document.getElementById('sw-manual-input').value);
+  const breakdown = swManualRows
+    .filter(r => r.name.trim() && !isNaN(parseFloat(r.amount)))
+    .map(r => ({ name: r.name.trim(), amount: parseFloat(r.amount) }));
+
+  const val = breakdown.length
+    ? breakdown.reduce((s, r) => s + r.amount, 0)
+    : parseFloat(document.getElementById('sw-manual-input').value);
   if (isNaN(val)) { toast('Enter a valid amount.', false); return; }
-  const r = await api.put('/api/splitwise/manual', { balance: val });
+
+  const r = await api.put('/api/splitwise/manual', { balance: val, breakdown });
   if (r.ok) { toast('Splitwise balance saved!'); loadBalance(); loadDashboard(); }
   else toast('Could not save.', false);
 }

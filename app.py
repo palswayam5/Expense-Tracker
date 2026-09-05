@@ -160,7 +160,8 @@ def splitwise_sync():
 def splitwise_manual():
     d = request.get_json(force=True)
     try:
-        _tracker.update_splitwise_balance(float(d["balance"]), [])
+        breakdown = d.get("breakdown", [])
+        _tracker.update_splitwise_balance(float(d["balance"]), breakdown)
         return jsonify({"ok": True})
     except (ValueError, KeyError) as err:
         return jsonify({"error": str(err)}), 400
